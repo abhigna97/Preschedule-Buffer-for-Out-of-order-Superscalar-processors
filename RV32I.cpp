@@ -208,7 +208,21 @@ uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 /***************************************** MAIN FUNCTION FOR RISCV SIMULATOR *****************************************/
 
 int main(int argc, char *argv[]) {
- 
+
+	const int PRESCHEDULE_SIZE=10;
+	const int SCHEDULE_WIDTH=4;
+	const int MAX_INSTRUCTIONS=10;
+	const int LOAD=0b0000011;
+	const int STORE=0b0100011;
+	const int IMM_INST=0b0010011;
+	const int INTEGER=0b0110011;
+	const int BRANCH=0b1100111;
+	const int STORAGE=40;
+
+	InstrFields *arr[STORAGE];
+
+	int size=0;
+	
 	string memoryimage= "program.mem";		// Default memory image file
 	uint32_t max_pc;						// To track the Maximum value of PC supplied from mem file
 	char choice;
@@ -299,19 +313,58 @@ int main(int argc, char *argv[]) {
 							}
 						#endif
 						switch(opcode){
-							case 0b0110111: if(!UtypeDecode(&Fields,currentINSTR)) return 0;	break;	// For LUI
-							case 0b0010111: if(!UtypeDecode(&Fields,currentINSTR)) return 0;	break;	// For AUIPC
-							case 0b1101111: if(!JtypeDecode(&Fields,currentINSTR)) return 0;	break;	// For JAL
-							case 0b1100111: if(!ItypeDecode(&Fields,currentINSTR)) return 0;	break;	// For JALR
-							case 0b1100011: if(!BtypeDecode(&Fields,currentINSTR)) return 0;	break;	// For BEQ,BNE,BLT,BGE,BLTU,BGEU
-							case 0b0000011: if(!ItypeDecode(&Fields,currentINSTR)) return 0;	break;	// For LB,LH,LW,LBU,LHU
-							case 0b0100011: if(!StypeDecode(&Fields,currentINSTR)) return 0;	break;	// For SB,SH,SW
-							case 0b0010011: if(!ItypeDecode(&Fields,currentINSTR)) return 0;	break;	// For ADDI,SLTI,SLTIU,ANDI,ORI,XORI,SLLI,SRLI,SRAI
-							case 0b0110011: if(!RtypeDecode(&Fields,currentINSTR)) return 0;	break;	// For ADD,SLT,SLTU,AND,OR,XOR,SLL,SRL,SUB,SRA
-							//case 0b0001111: break; 							 						// For FENCE
-							//case 0b1110011: if(!ItypeDecode(&Fields,currentINSTR)) return 0;	break;	// For ECALL,EBREAK
+							case 0b0110111: { if(!UtypeDecode(&Fields,currentINSTR)) 
+												arr[size] = &Fields;
+												return 0;	
+												break;	// For LUI
+											}
+											
+							case 0b0010111: { if(!UtypeDecode(&Fields,currentINSTR)) 
+												arr[size] = &Fields;
+												return 0;	
+												break;	// For AUIPC
+											}
+							case 0b1101111: { if(!JtypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break;	// For JAL
+											}
+							case 0b1100111: { if(!ItypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break;	// For JALR
+							}
+							case 0b1100011: { if(!BtypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break; // For BEQ,BNE,BLT,BGE,BLTU,BGEU
+							 }
+							case 0b0000011: { if(!ItypeDecode(&Fields,currentINSTR))
+											arr[size] = &Fields;
+											return 0;	
+											break; // For LB,LH,LW,LBU,LHU
+							 				} 	
+							case 0b0100011: { if(!StypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break; // For SB,SH,SW
+							 				}
+											
+							case 0b0010011: { if(!ItypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break; // For ADDI,SLTI,SLTIU,ANDI,ORI,XORI,SLLI,SRLI,SRAI
+							 				}	
+							case 0b0110011: { if(!RtypeDecode(&Fields,currentINSTR)) 
+											arr[size] = &Fields;
+											return 0;	
+											break; // For ADD,SLT,SLTU,AND,OR,XOR,SLL,SRL,SUB,SRA
+							 				}
 							default : 		cerr << "***ILLEGAL OPCODE*** Detected at address(hex): "<< hex << currentPC << "\tInstruction:"<< setfill('0') << setw(8) << hex << currentINSTR <<"\topcode(binary): " << bitset<7>(opcode) <<"\n"; 
-											return 0; break;
+											return 0; 
+											break;
+
+											size++;
 						}
 						#ifdef VERBOSE
 							print_regs();
@@ -336,6 +389,77 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+
+InstrFields pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
+int dependency;
+int a=0;
+int k[PRESCHEDULE_SIZE-1]={0};
+int b=0;
+int ex_lat;
+int war=0;
+
+if((sizeof(arr)/sizeof(InstrFields)) == MAX_INSTRUCTIONS) {
+
+size=0;
+
+for(int i=0; i<MAX_INSTRUCTIONS; i++) {
+    // determining the execution latency
+
+    dependency=0;
+    if(arr[i]->opcode == LOAD || arr[i]->opcode == STORE || arr[i]->opcode == BRANCH)
+    ex_lat = 4;
+    else
+    ex_lat = 1; // ADD, SUB, MUL
+
+    for(int j=i+1; j<(j+ex_lat); j++){
+        if(arr[i]->rd == (arr[j]->rs1 | arr[j]->rs2)){
+            printf("There is RAW data dependency between instruction %d and %d", i , j);
+            dependency = 1;
+			break;
+        } else if((arr[i]->rs1 | arr[i]->rs2) == arr[j]->rd){
+            printf("There is WAR data dependency between instruction %d and %d", i , j);
+            dependency = 1;
+			int war=1;
+			break;
+        } else if(arr[i]->rd == arr[j]->rd){
+            printf("There is WAW data dependency between instruction %d and %d", i , j);
+            dependency = 1;
+			break;
+        } else {
+            printf("No dependency");
+			dependency = 0;
+			
+		}
+    }
+
+    if(dependency){
+		if(war) {
+			pre_arr[a][k[a]] = *arr[i];	
+			// a=k[a]; // count = a; while(k[a] == 3) {count++;}
+			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
+			a=b;
+			b=(b<PRESCHEDULE_SIZE) ? b+1 : 0;
+			war=0;
+			
+			// a = (a<PRESCHEDULE_SIZE) ? a++ : 0;
+		} else {
+		pre_arr[a][k[a]] = *arr[i];
+		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
+		a=a+ex_lat;
+		}
+        // a=(dep=="WAR") ? 0 : (a+ex_lat); // for next use if there is any dependency
+    } else {
+        pre_arr[b][k[b]] = *arr[i];
+        b=(b<SCHEDULE_WIDTH) ? b : b+1 ;
+		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
+    }
+
+    
+}
+
+
+
+}
 	#ifdef SILENT
 		cout << "************************************ SIMULATION SUMMARY ***************************************\n" << endl;
 		print_regs();
@@ -344,6 +468,12 @@ int main(int argc, char *argv[]) {
 	#ifdef DEBUGMEM
     print_memory();
 	#endif
+    for(int i=0; i<SCHEDULE_WIDTH-1; i++) {
+    	for(int j=0; j<PRESCHEDULE_SIZE-1; j++) {
+   		printf("| %0x ",pre_arr[i][j]->opcode);
+    	}
+	printf("\n");
+    }
     return EXIT_SUCCESS;
 	
 }
