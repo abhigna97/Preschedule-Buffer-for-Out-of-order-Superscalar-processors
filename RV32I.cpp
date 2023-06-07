@@ -27,6 +27,8 @@
     uint32_t get_reg(uint32_t regindex) { return RegisterFile[regindex]; }
 
 uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp;								// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -54,6 +56,8 @@ uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -84,6 +88,8 @@ uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -114,6 +120,8 @@ uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -154,6 +162,8 @@ uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -172,6 +182,8 @@ uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+	uint32_t instr32bit;
+	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -389,7 +401,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-InstrFields pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
+uint32_t pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
 int dependency;
 int a=0;
 int k[PRESCHEDULE_SIZE-1];
@@ -433,7 +445,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
     int found=0;
     if(dependency){
 		if(war) {
-			pre_arr[a][k[a]] = arr[i]->opcode;
+			pre_arr[a][k[a]] = arr[i]->instr32bit;
 			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
 			a=b;
 			b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
@@ -463,7 +475,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 			
 			loop=0;
 			if(!match) {
-			pre_arr[a][k[a]] = arr[i];
+			pre_arr[a][k[a]] = arr[i]->instr32bit;
 			// b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
 			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
 		    a=a+ex_lat;
@@ -474,7 +486,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 				if(pre_arr[a+1][loop] == arr[i])
 					{match=1; loop++;} 
 			}*/
-			pre_arr[a+1][k[a+1]] = arr[i];
+			pre_arr[a+1][k[a+1]] = arr[i]->instr32bit;
 			k[a+1] = (k[a+1]<SCHEDULE_WIDTH) ? k[a+1]+1 : 0;
 		    a=a+ex_lat+1;
 			};
@@ -483,7 +495,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 		}
         // a=(dep=="WAR") ? 0 : (a+ex_lat); // for next use if there is any dependency
     } else {
-        pre_arr[b][k[b]] = arr[i];
+        pre_arr[b][k[b]] = arr[i]->instr32bit;
         b=(b<SCHEDULE_WIDTH) ? b : b+1 ;
 		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
     }
