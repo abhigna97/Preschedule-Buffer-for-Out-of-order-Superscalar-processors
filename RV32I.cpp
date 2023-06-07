@@ -389,16 +389,15 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-
 InstrFields pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
 int dependency;
 int a=0;
-int k[PRESCHEDULE_SIZE-1]={0};
+int k[PRESCHEDULE_SIZE-1];
 int b=0;
 int ex_lat;
-int war=0;
+int war;
 
-if((sizeof(arr)/sizeof(InstrFields)) == MAX_INSTRUCTIONS) {
+if((sizeof(arr)/sizeof(InstrFields)) == 10) {
 
 size=0;
 
@@ -415,7 +414,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
         if(arr[i]->rd == (arr[j]->rs1 | arr[j]->rs2)){
             printf("There is RAW data dependency between instruction %d and %d", i , j);
             dependency = 1;
-			break;
+		//	break;
         } else if((arr[i]->rs1 | arr[i]->rs2) == arr[j]->rd){
             printf("There is WAR data dependency between instruction %d and %d", i , j);
             dependency = 1;
@@ -424,32 +423,67 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
         } else if(arr[i]->rd == arr[j]->rd){
             printf("There is WAW data dependency between instruction %d and %d", i , j);
             dependency = 1;
-			break;
+		//	break;
         } else {
             printf("No dependency");
 			dependency = 0;
 			
 		}
     }
-
+    int found=0;
     if(dependency){
 		if(war) {
-			pre_arr[a][k[a]] = *arr[i];	
-			// a=k[a]; // count = a; while(k[a] == 3) {count++;}
+			pre_arr[a][k[a]] = arr[i]->opcode;
 			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
 			a=b;
-			b=(b<PRESCHEDULE_SIZE) ? b+1 : 0;
+			b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
 			war=0;
-			
-			// a = (a<PRESCHEDULE_SIZE) ? a++ : 0;
 		} else {
-		pre_arr[a][k[a]] = *arr[i];
-		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
-		a=a+ex_lat;
+		match=0;
+			while(!match) { 
+				if(pre_arr[a][loop] == arr[i])
+					{
+					match=1;
+					int old_a=a;
+					a++;
+					loop=0;
+					while(!found){
+						if(pre_arr[a][loop] == arr[i]){
+							a++;
+						}
+						if(loop==3) found=1;
+						loop++;
+					}
+					a=old_a;
+					found=0;
+					}
+					loop++; 
+			}
+			// find value of a
+			
+			loop=0;
+			if(!match) {
+			pre_arr[a][k[a]] = arr[i];
+			// b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
+			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
+		    a=a+ex_lat;
+			}
+			else {
+			/*int a_old = a;
+			while(!match) { 
+				if(pre_arr[a+1][loop] == arr[i])
+					{match=1; loop++;} 
+			}*/
+			pre_arr[a+1][k[a+1]] = arr[i];
+			k[a+1] = (k[a+1]<SCHEDULE_WIDTH) ? k[a+1]+1 : 0;
+		    a=a+ex_lat+1;
+			};
+		// pre_arr[a][k[a]] = arr[i];
+		
 		}
         // a=(dep=="WAR") ? 0 : (a+ex_lat); // for next use if there is any dependency
     } else {
-        pre_arr[b][k[b]] = *arr[i];
+        pre_arr[b][k[b]] = arr[i];
         b=(b<SCHEDULE_WIDTH) ? b : b+1 ;
 		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
     }
@@ -468,12 +502,6 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 	#ifdef DEBUGMEM
     print_memory();
 	#endif
-    for(int i=0; i<SCHEDULE_WIDTH-1; i++) {
-    	for(int j=0; j<PRESCHEDULE_SIZE-1; j++) {
-   		printf("| %0x ",pre_arr[i][j]->opcode);
-    	}
-	printf("\n");
-    }
     return EXIT_SUCCESS;
 	
 }
