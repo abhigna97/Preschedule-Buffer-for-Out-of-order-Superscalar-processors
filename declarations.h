@@ -19,6 +19,7 @@ map<uint32_t, uint32_t> RegisterFile{									// Modeling the 32 RISCV General P
     {24, 0}, {25, 0}, {26, 0}, {27, 0}, {28, 0}, {29, 0}, {30, 0}, {31, 0}
 };
 struct InstrFields{					//Struct type for Instruction that holds different part of the Instruction
+	unsigned int instr32bit;
     unsigned int opcode;         	//opcode
     unsigned int rs1;            	//rs1- source register1
     unsigned int rs2;           	//rs2- source register2
