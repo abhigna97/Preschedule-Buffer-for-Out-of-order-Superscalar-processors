@@ -27,8 +27,6 @@
     uint32_t get_reg(uint32_t regindex) { return RegisterFile[regindex]; }
 
 uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp;								// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -56,8 +54,6 @@ uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -88,8 +84,6 @@ uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -120,8 +114,6 @@ uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -162,8 +154,6 @@ uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -182,8 +172,6 @@ uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
-	uint32_t instr32bit;
-	instr32bit 		= instruction;
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
 	instrtemp 		= instruction;  				// assigning the temporary variable with the Instruction
 	Fields->opcode 	= instrtemp & 0x0000007F; 		// masking instrtemp with mask value to get value of Opcode
@@ -221,15 +209,15 @@ uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 
 int main(int argc, char *argv[]) {
 
-	const int PRESCHEDULE_SIZE=10;
-	const int SCHEDULE_WIDTH=4;
-	const int MAX_INSTRUCTIONS=10;
-	const int LOAD=0b0000011;
-	const int STORE=0b0100011;
-	const int IMM_INST=0b0010011;
-	const int INTEGER=0b0110011;
-	const int BRANCH=0b1100111;
-	const int STORAGE=40;
+	const PRESCHEDULE_SIZE=10;
+	const SCHEDULE_WIDTH=4
+	const MAX_INSTRUCTIONS=10;
+	const LOAD=0b0000011;
+	const STORE=0b0100011;
+	const IMM_INST=0b0010011;
+	const INTEGER=0b0110011;
+	const BRANCH=0b1100111;
+	const STORAGE=40;
 
 	InstrFields *arr[STORAGE];
 
@@ -401,17 +389,38 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-uint32_t pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
+
+InstrFields pre_arr [0:PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1:0];
 int dependency;
 int a=0;
 int k[PRESCHEDULE_SIZE-1];
 int b=0;
-int ex_lat;
-int war;
+int new_a;
+
+int placement_logic(int a, int k[], InstrFields arr[], int i, InstrFields pre_arr[][]) {
+	match=0;
+	found=0;
+	while(!found){
+	for(int r=0; r < SCHEDULE_WIDTH; r++){
+		if(arr[i] == pre_arr[a][r]){
+			printf("Instruction already present");
+			match=1;
+		} else if((pre_arr[a][r] == 0) && !match && !found){
+			new_a = a;
+			new_k = r;
+			found = 1;
+		}
+	}
+		a++; match=0;
+	}
+	pre_arr[new_a][new_k] = arr[i];
+	k[new_a] = (k[new_a] < SCHEDULE_WIDTH) ? k[new_a]+1 : 0;
+	return new_a;
+}
 
 if((sizeof(arr)/sizeof(InstrFields)) == 10) {
 
-size=0;
+	size=0;
 
 for(int i=0; i<MAX_INSTRUCTIONS; i++) {
     // determining the execution latency
@@ -422,7 +431,7 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
     else
     ex_lat = 1; // ADD, SUB, MUL
 
-    for(int j=i+1; j<(j+ex_lat); j++){
+    for(int j=i+1; j<(j+ex_lat); j++) {
         if(arr[i]->rd == (arr[j]->rs1 | arr[j]->rs2)){
             printf("There is RAW data dependency between instruction %d and %d", i , j);
             dependency = 1;
@@ -442,69 +451,21 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 			
 		}
     }
-    int found=0;
+
     if(dependency){
-		if(war) {
-			pre_arr[a][k[a]] = arr[i]->instr32bit;
-			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
-			a=b;
-			b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
-			war=0;
-		} else {
-		match=0;
-			while(!match) { 
-				if(pre_arr[a][loop] == arr[i])
-					{
-					match=1;
-					int old_a=a;
-					a++;
-					loop=0;
-					while(!found){
-						if(pre_arr[a][loop] == arr[i]){
-							a++;
-						}
-						if(loop==3) found=1;
-						loop++;
+					new_a = placement_logic_war(a, k, arr, i, pre_arr);
+					if(war){
+						for(int loop=0; loop<PRESCHEDULE_SIZE; loop++){
+							if(k[loop] < SCHEDULE_WIDTH)
+								a = loop;
+						}	
+					war = 0;
 					}
-					a=old_a;
-					found=0;
+					else {
+						a = new_a + ex_lat;
 					}
-					loop++; 
-			}
-			// find value of a
-			
-			loop=0;
-			if(!match) {
-			pre_arr[a][k[a]] = arr[i]->instr32bit;
-			// b=(k[b]<SCHEDULE_WIDTH) ? 0 : b+1;
-			k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
-		    a=a+ex_lat;
-			}
-			else {
-			/*int a_old = a;
-			while(!match) { 
-				if(pre_arr[a+1][loop] == arr[i])
-					{match=1; loop++;} 
-			}*/
-			pre_arr[a+1][k[a+1]] = arr[i]->instr32bit;
-			k[a+1] = (k[a+1]<SCHEDULE_WIDTH) ? k[a+1]+1 : 0;
-		    a=a+ex_lat+1;
-			};
-		// pre_arr[a][k[a]] = arr[i];
-		
-		}
-        // a=(dep=="WAR") ? 0 : (a+ex_lat); // for next use if there is any dependency
-    } else {
-        pre_arr[b][k[b]] = arr[i]->instr32bit;
-        b=(b<SCHEDULE_WIDTH) ? b : b+1 ;
-		k[a] = (k[a]<SCHEDULE_WIDTH) ? k[a]+1 : 0;
-    }
-
-    
-}
-
-
-
+				}
+    	}
 }
 	#ifdef SILENT
 		cout << "************************************ SIMULATION SUMMARY ***************************************\n" << endl;
