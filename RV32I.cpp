@@ -206,19 +206,67 @@ uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 }
 
 /***************************************** MAIN FUNCTION FOR RISCV SIMULATOR *****************************************/
+	const int PRESCHEDULE_SIZE=10;
+        const int SCHEDULE_WIDTH=4;
+        const int MAX_INSTRUCTIONS=10;
+        const int LOAD=0b0000011;
+        const int STORE=0b0100011;
+        const int IMM_INST=0b0010011;
+        const int INTEGER=0b0110011;
+        const int BRANCH=0b1100111;
+        const int STORAGE=40;
+
+InstrFields pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
+int dependency;
+int a=0;
+int k[PRESCHEDULE_SIZE-1];
+int b=0;
+int new_a;
+int ex_lat;
+
+	/*const int PRESCHEDULE_SIZE=10;
+        const int SCHEDULE_WIDTH=4;
+        const int MAX_INSTRUCTIONS=10;
+        const int LOAD=0b0000011;
+        const int STORE=0b0100011;
+        const int IMM_INST=0b0010011;
+        const int INTEGER=0b0110011;
+        const int BRANCH=0b1100111;
+        const int STORAGE=40;*/
+
+int placement_logic(int a, int k[], InstrFields arr[], int i, InstrFields pre_arr[][]) {
+        int match=0;
+        int found=0;
+        while(!found){
+        for(int r=0; r < SCHEDULE_WIDTH; r++){
+                if(arr[i] == pre_arr[a][r]){
+                        printf("Instruction already present");
+                        match=1;
+                } else if((pre_arr[a][r] == 0) && !match && !found){
+                        new_a = a;
+                        new_k = r;
+                        found = 1;
+                }
+        }
+                a++; match=0;
+        }
+        pre_arr[new_a][new_k] = arr[i];
+        k[new_a] = (k[new_a] < SCHEDULE_WIDTH) ? k[new_a]+1 : 0;
+        return new_a;
+}
 
 int main(int argc, char *argv[]) {
 
-	const PRESCHEDULE_SIZE=10;
-	const SCHEDULE_WIDTH=4
-	const MAX_INSTRUCTIONS=10;
-	const LOAD=0b0000011;
-	const STORE=0b0100011;
-	const IMM_INST=0b0010011;
-	const INTEGER=0b0110011;
-	const BRANCH=0b1100111;
-	const STORAGE=40;
-
+/*	const int PRESCHEDULE_SIZE=10;
+	const int SCHEDULE_WIDTH=4;
+	const int MAX_INSTRUCTIONS=10;
+	const int LOAD=0b0000011;
+	const int STORE=0b0100011;
+	const int IMM_INST=0b0010011;
+	const int INTEGER=0b0110011;
+	const int BRANCH=0b1100111;
+	const int STORAGE=40;
+*/
 	InstrFields *arr[STORAGE];
 
 	int size=0;
@@ -390,7 +438,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-InstrFields pre_arr [0:PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1:0];
+/*InstrFields pre_arr [0:PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1:0];
 int dependency;
 int a=0;
 int k[PRESCHEDULE_SIZE-1];
@@ -417,7 +465,7 @@ int placement_logic(int a, int k[], InstrFields arr[], int i, InstrFields pre_ar
 	k[new_a] = (k[new_a] < SCHEDULE_WIDTH) ? k[new_a]+1 : 0;
 	return new_a;
 }
-
+*/
 if((sizeof(arr)/sizeof(InstrFields)) == 10) {
 
 	size=0;
@@ -479,3 +527,4 @@ for(int i=0; i<MAX_INSTRUCTIONS; i++) {
 	
 }
 // commands to use: g++ -o rv RV32I.cpp ; ./rv PC SP MEMFILE
+
