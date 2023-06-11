@@ -15,8 +15,25 @@
 #include <unordered_map>
 #include <bits/stdc++.h>
 #include "declarations.h"					// Contains Memory, Constants and Instruction Fields Struct Declarations
-const int STORAGE=40;
-int opcode_arr[STORAGE],rs1_arr[STORAGE],rs2_arr[STORAGE],rd_arr[STORAGE],instr_arr[STORAGE];
+		const int PRESCHEDULE_SIZE=20;
+        const int SCHEDULE_WIDTH=4;
+        const int MAX_INSTRUCTIONS=12;
+        const int LOAD=0b0000011;
+        const int STORE=0b0100011;
+        const int IMM_INST=0b0010011;
+        const int INTEGER=0b0110011;
+        const int BRANCH=0b1100011;
+
+		uint32_t pre_arr [PRESCHEDULE_SIZE][SCHEDULE_WIDTH]={};
+		int dependency;
+		int a=0;
+		int k[PRESCHEDULE_SIZE];
+		int new_a=0;
+		int new_k;
+		int ex_lat;
+		int war = 0;
+
+int opcode_arr[PRESCHEDULE_SIZE],rs1_arr[PRESCHEDULE_SIZE],rs2_arr[PRESCHEDULE_SIZE],rd_arr[PRESCHEDULE_SIZE],instr_arr[PRESCHEDULE_SIZE];
 
 /***************************************** DECODE FUNCTIONS SPECIFIC TO INSTRUCTION TYPE *****************************************/
 
@@ -26,24 +43,20 @@ int opcode_arr[STORAGE],rs1_arr[STORAGE],rs2_arr[STORAGE],rd_arr[STORAGE],instr_
     void set_reg(uint32_t regindex, uint32_t regvalue) { RegisterFile[regindex] = regvalue; }	// Getters and setters for general-purpose registers
     uint32_t get_reg(uint32_t regindex) { return RegisterFile[regindex]; }
 
-void fill_arrays(struct InstrFields *Fields, int size){
-	// arr[size] = &Fields;
-	// printf("currently storing opcode_arr[%0d] = %0d Fields->opcode %0d\n",size, opcode_arr[size], Fields->opcode);
+int fill_arrays(struct InstrFields *Fields, int size){
 	opcode_arr[size] = Fields->opcode;
-	// printf("currently storing opcode_arr[%0d] = %0d Fields->opcode %0d\n",size, opcode_arr[size], Fields->opcode);
 	rs1_arr[size] = Fields->rs1;
-	// printf("currently storing rs1_arr[%0d] = %0d Fields->rs1 %0d\n",size, rs1_arr[size], Fields->rs1);
 	rs2_arr[size] = Fields->rs2;
-	// printf("currently storing rs2_arr[%0d] = %0d Fields->rs2 %0d\n",size, rs2_arr[size], Fields->rs2);
 	rd_arr[size] = Fields->rd;
-	// printf("currently storing rd_arr[%0d] = %0d Fields->rd %0d\n",size, rd_arr[size], Fields->rd);
 	instr_arr[size] = Fields->instr32bit;
-	// printf("currently storing instr_arr[%0d] = %0d Fields->instr32bit %0d\n",size, instr_arr[size], Fields->instr32bit);
-	for(int loop=0; loop<10; loop++)
-		printf("instr_arr[%0d] = %0d", loop, instr_arr[loop]);
+	//for(int loop=0; loop<PRESCHEDULE_SIZE; loop++)
+		//printf("instr_arr[%0d] = %08x\n", loop, instr_arr[loop]);
+	return 1;
 }
 
-uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("RtypeDecode instruction %0x  Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp;								// temporary variable to store the Instruction from file
@@ -67,10 +80,13 @@ uint32_t RtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 	#ifdef DEBUG
 		printf("***R-TYPE:0x%08x****\nfunct7\t=0x%02x\n,rs2\t=0x%02x\n,rs1\t=0x%02x\n,funct3\t=0x%01x\n,rd\t=0x%02x\n,opcode\t=0x%02x\n",instruction,Fields->funct7,Fields->rs2,Fields->rs1,Fields->funct3,Fields->rd,Fields->opcode);
 	#endif
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
-uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("ItypeDecode instruction %0x Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
@@ -97,11 +113,13 @@ uint32_t ItypeDecode(struct InstrFields *Fields, uint32_t instruction){
     #ifdef DEBUG
 		printf("***I-TYPE:0x%08x****\nimm[11:0]\t=0x%03x\n,rs1\t=0x%02x\n,funct3\t=0x%01x\n,rd\t=0x%02x\n,opcode\t=0x%02x\n",instruction,Fields->imm_I11_0,Fields->rs1,Fields->funct3,Fields->rd,Fields->opcode);
 	#endif
-	// fill_arrays(Fields, size);
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
-uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("StypeDecode instruction %0x Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
@@ -128,10 +146,13 @@ uint32_t StypeDecode(struct InstrFields *Fields, uint32_t instruction){
 	#ifdef DEBUG
 		printf("***S-TYPE:0x%08x****\nimm[11:0]\t=0x%02x\n,imm[11:5]\t=0x%02x\n,rs2\t=0x%02x\n,rs1\t=0x%02x\n,funct3\t=0x%01x\n,imm[4:0]\t=0x%02x\n,opcode\t=0x%02x\n",instruction,Fields->imm_S11_0,Fields->imm_S11_5,Fields->rs2,Fields->rs1,Fields->funct3,Fields->imm_S4_0,Fields->opcode);
 	#endif
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
-uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("BtypeDecode instruction %0x Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
@@ -168,10 +189,13 @@ uint32_t BtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 	#ifdef DEBUG
 		printf("***B-TYPE:0x%08x****\nimm[12:1]\t=%0x\n,imm[12]\t=%0x\n,imm[10:5]\t=%0x\n,rs2\t=%0x\n,rs1\t=%0x\n,funct3\t=%0x\n,imm[4:1]\t=%0x\n,imm[11]\t=%0x\n,opcode\t=%0x\n",instruction,Fields->imm_B12_1,Fields->imm_B12,Fields->imm_B10_5,Fields->rs2,Fields->rs1,Fields->funct3,Fields->imm_B4_1,Fields->imm_B11,Fields->opcode);
 	#endif
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
-uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("UtypeDecode instruction %0x Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp; 							// temporary variable to store the Instruction from file
@@ -186,10 +210,13 @@ uint32_t UtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 	#ifdef DEBUG
 		printf("***U-TYPE:0x%08x****\nimm[31:12]\t=0x%05x\n,rd\t=0x%02x\n,opcode\t=0x%02x\n",instruction,Fields->imm_U31_12,Fields->rd,Fields->opcode);
 	#endif
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
-uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
+uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction,int size){
+	int sizetemp;
+	sizetemp = size;
 	Fields->instr32bit 		= instruction;
 	// printf("JtypeDecode instruction %0x Fields->instr32bit %0x\n", instruction, Fields->instr32bit);
 	uint32_t instrtemp,immtemp; 					// temporary variable to store the Instruction from file
@@ -220,96 +247,88 @@ uint32_t JtypeDecode(struct InstrFields *Fields, uint32_t instruction){
 	#ifdef DEBUG
 		printf("***J-TYPE:0x%08x****\nimm[20]\t=0x%01x\n,imm[20]\t=0x%01x\n,imm[10:1]\t=0x%03x\n,imm[11]\t=0x%01x\n,imm[19:12]\t=0x%02x\n,rd\t=0x%02x\n,opcode\t=0x%02x\n",instruction,Fields->imm_J20_1,Fields->imm_J20,Fields->imm_J10_1,Fields->imm_J11,Fields->imm_J19_12,Fields->rd,Fields->opcode);
 	#endif
-	return 1;
+	if(fill_arrays(Fields, sizetemp)) return 1;
+	else return 0;
 }
 
 /***************************************** MAIN FUNCTION FOR RISCV SIMULATOR *****************************************/
-		const int PRESCHEDULE_SIZE=10;
-        const int SCHEDULE_WIDTH=4;
-        const int MAX_INSTRUCTIONS=10;
-        const int LOAD=0b0000011;
-        const int STORE=0b0100011;
-        const int IMM_INST=0b0010011;
-        const int INTEGER=0b0110011;
-        const int BRANCH=0b1100111;
 
-		InstrFields *arr[STORAGE];
-		uint32_t pre_arr [PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1];
-		int dependency;
-		int a=0;
-		int k[PRESCHEDULE_SIZE-1];
-		int b=0;
-		int new_a;
-		int new_k;
-		int ex_lat;
-		int war = 0;
-int placement_logic(int a, int k[PRESCHEDULE_SIZE-1], int instr_arr[STORAGE], int i, uint32_t pre_arr[PRESCHEDULE_SIZE-1][SCHEDULE_WIDTH-1]) {
-		printf("Inside is placement logic function\n");
+void placement_logic(int a, int k[PRESCHEDULE_SIZE], int instr_arr[PRESCHEDULE_SIZE], int i, uint32_t pre_arr[PRESCHEDULE_SIZE][SCHEDULE_WIDTH]) {
+	
 				int match=0;
 				int found=0;
 				while(!found){
-				for(int r=0; r < SCHEDULE_WIDTH; r++){
-						
+				for(int r = 0; r < SCHEDULE_WIDTH; r++){
+						//cout << "pre_arr["<<dec<<a<<"]["<<r<<"] = " << "0x" << setfill('0') << setw(8) << hex << pre_arr[a][r] << "\n" << endl;
 						if(instr_arr[i] == pre_arr[a][r]){
-								printf("Instruction already present\n");
-								printf("Present : instr_arr[%0d]=%0d pre_arr[%0d][%0d]=%0d", i, instr_arr[i], a, r, pre_arr[a][r]);
+								printf("Instruction already Present : instr_arr[%0d]=%0d pre_arr[%0d][%0d]=%0d\n", i, instr_arr[i], a, r, pre_arr[a][r]);
 								match=1;
-						} else if((pre_arr[a][r] == 0) && !match && !found){
+								break;
+						} else {
+							if((pre_arr[a][r] == 0) && !match && !found){
 								new_a = a;
 								new_k = r;
+								//printf("new_a=%d new_k=%d match=%d pre_arr[%0d][%0d]=%0x\n",a,r,match,a,r,pre_arr[a][r]);
 								found = 1;
+								break;
+							}
 						}
 				}
 						a++; match=0;
 				}
+				
 				pre_arr[new_a][new_k] = instr_arr[i];
+				//printf("placing Instr=%08x into pre_arr[%0d][%0d]\n",instr_arr[i],new_a,new_k);
 				k[new_a] = (k[new_a] < SCHEDULE_WIDTH) ? k[new_a]+1 : 0;
-				return new_a;
+				//return new_a;
 		}
 		
-void print_arr(int size){
+void dependency_calc(){
 	for(int i=0; i<MAX_INSTRUCTIONS; i++) {
+	
 		dependency=0;
-		printf("Inside i-loop i %0d\n",i);
+		//printf("i=%0d\t",i);
 		if(opcode_arr[i] == LOAD || opcode_arr[i] == STORE || opcode_arr[i] == BRANCH) ex_lat = 4;
 		else	ex_lat = 1; // ADD, SUB, MUL
-		for(int j=i+1; j<(j+ex_lat); j++) {
-			printf("Going inside j-loop j %0d\n",j);
+		for(int j=i+1; j<(i+ex_lat+1); j++) {
+			//printf("j=%0d\n",j);
 			if( (rd_arr[i] == rs1_arr[j]) || (rd_arr[i] == rs2_arr[j])){
-				printf("There is RAW data dependency between instruction %d and %d\n", i , j);
-				printf("rd_arr[%0d]=%0d rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d\n", i, rd_arr[i], j, rs1_arr[j], j, rs2_arr[j]);
+				printf("RAW dependency between instructions %d and %d\n", i , j);
+				//printf("rd_arr[%0d]=%0d rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d\n", i, rd_arr[i], j, rs1_arr[j], j, rs2_arr[j]);
 				dependency = 1;
 				break;
 			} else if((rs1_arr[i] == rd_arr[j]) || (rs2_arr[i] == rd_arr[j])){
-				printf("There is WAR data dependency between instruction %d and %d\n", i , j);
-				printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d \n", i, rs1_arr[i], i, rs2_arr[i], j, rd_arr[j]);
+				printf("WAR dependency between instructions %d and %d\n", i , j);
+				//printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d \n", i, rs1_arr[i], i, rs2_arr[i], j, rd_arr[j]);
 				dependency = 1;
 				war=1;
 				break;
 			} else if(rd_arr[i] == rd_arr[j]){
-				printf("There is WAW data dependency between instruction %d and %d\n", i , j);
-				printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d ", i, rs1_arr[i], i, rs2_arr[i], i, rd_arr[i], j, rs1_arr[j], j, rs2_arr[j], j, rd_arr[j]);
+				printf("WAW dependency between instructions %d and %d\n", i , j);
+				//printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d ", i, rs1_arr[i], i, rs2_arr[i], i, rd_arr[i], j, rs1_arr[j], j, rs2_arr[j], j, rd_arr[j]);
 				dependency = 1;
 				break;
 			} else {
-				printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d \n", i, rs1_arr[i], i, rs2_arr[i], j, rd_arr[j]);
-				printf("No dependency\n");
+				//printf("rs1_arr[%0d]=%0d rs2_arr[%0d]=%0d rd_arr[%0d]=%0d \n", i, rs1_arr[i], i, rs2_arr[i], j, rd_arr[j]);
+				printf("No dependency between instructions %d and %d\n", i , j);
 				dependency = 0;
 			}
-			printf("Going outside j-loop j %0d\n",j);
 		}
-		if(dependency){
-			new_a = placement_logic(a, k,instr_arr,i,pre_arr);
+		placement_logic(a, k,instr_arr,i,pre_arr);		
+		if(dependency || (i== (MAX_INSTRUCTIONS-1))){
+			//placement_logic(a, k,instr_arr,i,pre_arr);
 				if(war){
 					for(int loop=0; loop<PRESCHEDULE_SIZE; loop++){
-						if(k[loop] < SCHEDULE_WIDTH) a = loop;
+						if(k[loop] < SCHEDULE_WIDTH) {
+							a = loop;
+							break;
+						}
 					}	
 					war = 0;
 					} 
 				else a = new_a + ex_lat;
 		dependency = 0;
 		}
-		printf("Going outside i-loop i %0d\n",i);
 	}
 }
 
@@ -319,6 +338,12 @@ int main(int argc, char *argv[]) {
 	uint32_t max_pc;						// To track the Maximum value of PC supplied from mem file
 	char choice;
 	uint32_t count=0;
+	
+	for(int loop1=0; loop1 < PRESCHEDULE_SIZE; loop1++){
+		for(int loop2=0; loop2 < SCHEDULE_WIDTH; loop2++){
+			pre_arr[loop1][loop2]=0;
+		}
+	}
 
     if (argc > 4) {
         cerr << "***CHECK ARGUMENTS*** Incorrect Number of Arguments Provided. Should be Used as follows: \n" << argv[0] << " <pc> <sp> <memoryimage>" << endl;
@@ -405,69 +430,41 @@ int main(int argc, char *argv[]) {
 							}
 						#endif
 						switch(opcode){
-							case 0b0110111: { if(!UtypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-												printf("Inside UtypeDecode \n");
-												if(size>=10) print_arr(size);
+							case 0b0110111: { if(!UtypeDecode(&Fields,currentINSTR,size)) return 0;	
 												size++;
 												break;	// For LUI
 											}
 											
-							case 0b0010111: { if(!UtypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-
-												printf("Inside UtypeDecode \n");
-												if(size>=10) print_arr(size);
+							case 0b0010111: { if(!UtypeDecode(&Fields,currentINSTR,size)) return 0;	
 												size++;
 												break;	// For AUIPC
 											}
-							case 0b1101111: { if(!JtypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-											printf("Inside JtypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b1101111: { if(!JtypeDecode(&Fields,currentINSTR,size)) return 0;	
 											size++;
 											break;	// For JAL
 											}
-							case 0b1100111: { if(!ItypeDecode(&Fields,currentINSTR)) return 0;
-											fill_arrays(&Fields, size);
-											printf("Inside ItypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b1100111: { if(!ItypeDecode(&Fields,currentINSTR,size)) return 0;
 											size++;
 											break;	// For JALR
 							}
-							case 0b1100011: { if(!BtypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-											printf("Inside BtypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b1100011: { if(!BtypeDecode(&Fields,currentINSTR,size)) return 0;	
 											size++;	
 											break; // For BEQ,BNE,BLT,BGE,BLTU,BGEU
 							 }
-							case 0b0000011: { if(!ItypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-											printf("Inside ItypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b0000011: { if(!ItypeDecode(&Fields,currentINSTR,size)) return 0;	
 											size++;
 											break; // For LB,LH,LW,LBU,LHU
 							 				} 	
-							case 0b0100011: { if(!StypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-											printf("Inside StypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b0100011: { if(!StypeDecode(&Fields,currentINSTR,size)) return 0;	
 											size++;
 											break; // For SB,SH,SW
 							 				}
 											
-							case 0b0010011: { if(!ItypeDecode(&Fields,currentINSTR)) return 0;
-											fill_arrays(&Fields, size);
-											printf("Inside ItypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b0010011: { if(!ItypeDecode(&Fields,currentINSTR,size)) return 0;
 											size++;
 											break; // For ADDI,SLTI,SLTIU,ANDI,ORI,XORI,SLLI,SRLI,SRAI
 							 				}	
-							case 0b0110011: { if(!RtypeDecode(&Fields,currentINSTR)) return 0;	
-											fill_arrays(&Fields, size);
-											printf("Inside RtypeDecode \n");
-											if(size>=10) print_arr(size);
+							case 0b0110011: { if(!RtypeDecode(&Fields,currentINSTR,size)) return 0;	
 											size++;
 											break; // For ADD,SLT,SLTU,AND,OR,XOR,SLL,SRL,SUB,SRA
 							 				}
@@ -475,6 +472,7 @@ int main(int argc, char *argv[]) {
 											return 0; 
 											break;
 						}
+						
 						#ifdef VERBOSE
 							print_regs();
 							cout << "*********************************** YOU DESERVE EXTRA CREDIT ***********************************\n" << endl;
@@ -491,12 +489,18 @@ int main(int argc, char *argv[]) {
 								cout << "\n\nThanks...Proceeding to next instruction execution....\n\n" << endl;
 							};
 						#endif
+					
 				}
 			} else {
 				cerr << "***TRAP*** MISALIGNED INSTRUCTION ADDRESS is fetched at PC(Hex) :0x" << hex << pc << endl;
 					return 0;
 			}
+			if(size == MAX_INSTRUCTIONS) {
+				dependency_calc();
+				break;
+			}
 		}
+
 	}
 	
 
@@ -504,10 +508,10 @@ int main(int argc, char *argv[]) {
 ofstream outputFile("prescheduled_instr.mem");
 
     if (outputFile.is_open()) {
- 		for(int i=0;i<PRESCHEDULE_SIZE;i++){
+ 		for(int i=0;i<max_pc/4;i++){
 			for(int j=0;j<SCHEDULE_WIDTH;j++){
 				if(!(pre_arr[i][j]==0)) {
-				outputFile << "pre_arr["<<i<<"]["<<j<<"] = " << "0x" << setfill('0') << setw(8) << hex << pre_arr[i][j] << "\n" << endl;
+				outputFile << "pre_arr["<<dec<<i<<"]["<<j<<"] = " << "0x" << setfill('0') << setw(8) << hex << pre_arr[i][j] << "\n" << endl;
 				}
 			}
 		}
